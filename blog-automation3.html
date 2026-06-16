@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>블로그 자동화 시스템</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f3;
+    color: #1a1a1a;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #fff;
+    border-bottom: 1px solid #e5e5e5;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+  .logo span { color: #cc0000; }
+
+  .api-area { display: flex; align-items: center; gap: 8px; }
+  .api-area input {
+    width: 280px;
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #1a1a1a;
+    background: #f9f9f9;
+  }
+  .api-status { font-size: 12px; color: #888; }
+  .api-status.ok { color: #22c55e; }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: #fff;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #e5e5e5;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #666;
+    border: none;
+    background: transparent;
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+  .tab:hover { background: #f5f5f3; color: #1a1a1a; }
+  .tab.active { background: #1a1a1a; color: #fff; font-weight: 500; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e5e5;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .label {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  select, input[type="text"], input[type="password"], textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1a1a1a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  select:focus, input:focus, textarea:focus { border-color: #1a1a1a; }
+  textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .row > *:first-child { flex: 1; }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #1a1a1a;
+    font-family: inherit;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: #f5f5f3; }
+  .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .btn-primary:hover { background: #333; }
+  .btn-red { background: #cc0000; color: #fff; border-color: #cc0000; }
+  .btn-red:hover { background: #aa0000; }
+  .btn-full { width: 100%; }
+
+  .platform-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .ptab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #666;
+    transition: all 0.15s;
+  }
+  .ptab:hover { background: #f5f5f3; }
+  .ptab.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .output-box {
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 14px;
+    min-height: 200px;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    color: #1a1a1a;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .copy-btn {
+    font-size: 12px;
+    color: #666;
+    cursor: pointer;
+    padding: 4px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { background: #f5f5f3; color: #1a1a1a; }
+
+  .status-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: #ddd;
+  }
+  .status-dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+  .status-dot.ok { background: #22c55e; }
+  .status-dot.error { background: #ef4444; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .status-text { font-size: 12px; color: #888; display: flex; align-items: center; }
+
+  .tag-box { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag {
+    padding: 4px 12px;
+    background: #f5f5f3;
+    border: 1px solid #e5e5e5;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #444;
+  }
+
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .checklist li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: #1a1a1a; }
+  .check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid #ddd;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; flex-shrink: 0; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .check.done { background: #22c55e; border-color: #22c55e; color: #fff; }
+  .check:hover:not(.done) { border-color: #888; }
+
+  .divider { border: none; border-top: 1px solid #e5e5e5; margin: 16px 0; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .metric {
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .metric-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .metric-value { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+  .metric-sub { font-size: 12px; color: #888; margin-top: 4px; }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 6px;
+    font-weight: 500;
+  }
+  .badge-warn { background: #fef3c7; color: #92400e; }
+  .badge-ok { background: #d1fae5; color: #065f46; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 14px;
+  }
+
+  .mb8 { margin-bottom: 8px; }
+  .mb16 { margin-bottom: 16px; }
+
+  .progress-bar {
+    height: 6px;
+    background: #e5e5e5;
+    border-radius: 999px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #cc0000;
+    border-radius: 999px;
+    transition: width 0.3s;
+  }
+
+  .tip {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #92400e;
+    margin-top: 12px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid #e5e5e5;
+    border-top-color: #1a1a1a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: -2px;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">블로그 <span>자동화</span> 시스템</div>
+  <div class="api-area">
+    <input type="password" id="api-key" placeholder="Claude API 키 입력..." oninput="checkApiKey()" />
+    <span class="api-status" id="api-status">미입력</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('generate', this)">글 생성</button>
+    <button class="tab" onclick="showTab('convert', this)">플랫폼 변환</button>
+    <button class="tab" onclick="showTab('tags', this)">태그 생성</button>
+    <button class="tab" onclick="showTab('checklist', this)">발행 체크</button>
+    <button class="tab" onclick="showTab('dashboard', this)">현황판</button>
+  </div>
+
+  <!-- 글 생성 -->
+  <div id="panel-generate" class="panel active">
+    <div class="card">
+      <div class="label mb8">블로그 선택</div>
+      <select id="blog-type" onchange="updateCatDisplay()">
+        <option value="jiwon">내 블로그 — 정부지원금</option>
+        <option value="tax">내 블로그 — 세금·납부정보</option>
+        <option value="life">내 블로그 — 생활정보</option>
+        <option value="sports">신랑 블로그 — 스포츠</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="label mb8">키워드</div>
+      <div class="row mb16">
+        <input type="text" id="keyword-input" placeholder="예: 청년미래적금, 여권 분실 신고, 손흥민 프로필..." onkeydown="if(event.key==='Enter')generatePost()" />
+        <button class="btn btn-primary" onclick="generatePost()">생성 →</button>
+      </div>
+      <div id="cat-display" style="font-size:12px; color:#888;"></div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between">
+        <div class="section-title" style="margin-bottom:0;">생성된 글</div>
+        <div class="status-text">
+          <span class="status-dot" id="gen-dot"></span>
+          <span id="gen-status">대기 중</span>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="platform-tabs">
+        <button class="ptab active" onclick="showPlatform('naver', this)">네이버</button>
+        <button class="ptab" onclick="showPlatform('google', this)">구글</button>
+        <button class="ptab" onclick="showPlatform('tistory', this)">티스토리</button>
+      </div>
+      <div class="flex-between">
+        <span style="font-size:12px; color:#888;" id="char-count"></span>
+        <button class="copy-btn" onclick="copyOutput()">복사</button>
+      </div>
+      <div class="output-box" id="output-box">키워드를 입력하고 생성 버튼을 누르세요.</div>
+    </div>
+  </div>
+
+  <!-- 플랫폼 변환 -->
+  <div id="panel-convert" class="panel">
+    <div class="card">
+      <div class="label mb8">원본 글 붙여넣기</div>
+      <textarea id="convert-input" placeholder="네이버 글을 붙여넣으면 구글/티스토리 버전으로 변환해드려요..."></textarea>
+    </div>
+    <div class="card">
+      <div class="label mb8">변환할 플랫폼</div>
+      <select id="convert-target" class="mb16">
+        <option value="google">구글 (Blogger) — E-E-A-T + HTML + Featured Snippet</option>
+        <option value="tistory">티스토리 — H2/H3 + 목차 + AdSense 최적화</option>
+        <option value="naver">네이버 — 체류시간 + ~요체 최적화</option>
+      </select>
+      <button class="btn btn-primary btn-full" onclick="convertPost()">변환 →</button>
+    </div>
+    <div class="card">
+      <div class="flex-between">
+        <div class="section-title" style="margin-bottom:0;">변환 결과</div>
+        <button class="copy-btn" onclick="copyConvert()">복사</button>
+      </div>
+      <hr class="divider">
+      <div class="output-box" id="convert-output">변환 결과가 여기에 표시됩니다.</div>
+    </div>
+  </div>
+
+  <!-- 태그 생성 -->
+  <div id="panel-tags" class="panel">
+    <div class="card">
+      <div class="label mb8">키워드 또는 글 제목</div>
+      <div class="row mb16">
+        <input type="text" id="tag-input" placeholder="예: 건강보험 환급금, 여권 분실..." onkeydown="if(event.key==='Enter')generateTags()" />
+        <select id="tag-platform" style="max-width:160px;">
+          <option value="naver">네이버 (#포함)</option>
+          <option value="tistory">티스토리 (줄바꿈)</option>
+          <option value="google">구글 (#포함)</option>
+        </select>
+        <button class="btn btn-primary" onclick="generateTags()">생성 →</button>
+      </div>
+      <div class="tip">💡 티스토리는 # 없이 엔터로 구분, 네이버/구글은 # 포함 공백으로 구분해요.</div>
+    </div>
+    <div class="card">
+      <div class="flex-between">
+        <div class="section-title" style="margin-bottom:0;">생성된 태그</div>
+        <button class="copy-btn" onclick="copyTags()">복사</button>
+      </div>
+      <hr class="divider">
+      <div class="output-box" id="tag-output">태그가 여기에 표시됩니다.</div>
+      <div class="tag-box" id="tag-preview"></div>
+    </div>
+  </div>
+
+  <!-- 발행 체크 -->
+  <div id="panel-checklist" class="panel">
+    <div class="card">
+      <div class="section-title">AdSense 승인 전 발행 체크리스트</div>
+      <ul class="checklist" id="checklist">
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>글자 수 1,500자 이상</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>H2/H3 소제목 구조 사용</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>이미지 1개 삽입 + alt 텍스트 입력</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>날짜 기준 문구 포함 (※ 2026년 6월 기준)</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>공식 사이트 외부 링크 포함</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>태그 10개 이상 입력</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>내부 링크 1개 이상 연결</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>Q&A 섹션 포함</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>마무리 CTA + 이웃추가 유도</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>카테고리 올바르게 선택</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>광고 코드 없음 (승인 전 필수)</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>이미지 파일명 SEO 최적화</span></li>
+      </ul>
+      <hr class="divider">
+      <div class="flex-between">
+        <span style="font-size:13px; color:#888;" id="check-progress">0 / 12 완료</span>
+        <button class="btn" onclick="resetChecklist()">초기화</button>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 현황판 -->
+  <div id="panel-dashboard" class="panel">
+    <div class="card">
+      <div class="section-title">블로그 현황</div>
+      <div class="grid2">
+        <div class="metric">
+          <div class="metric-label">네이버 (lifeinfonote)</div>
+          <div class="metric-value">승인 전 <span class="badge badge-warn">대기</span></div>
+          <div class="metric-sub">정부지원금 / 세금 / 생활정보</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">구글 (lifeinfonote2026)</div>
+          <div class="metric-value">승인 전 <span class="badge badge-warn">대기</span></div>
+          <div class="metric-sub">서치콘솔 ✓ 사이트맵 ✓</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">티스토리 (lifeinfonote2026)</div>
+          <div class="metric-value">3 / 10글</div>
+          <div class="metric-sub">생활정보 카테고리</div>
+          <div class="progress-bar" style="margin-top:8px;">
+            <div class="progress-fill" style="width:30%; background:#cc0000;"></div>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">신랑 구글 (sportsinside2026)</div>
+          <div class="metric-value">승인 전 <span class="badge badge-warn">대기</span></div>
+          <div class="metric-sub">3글 삼각 내부링크 ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">오늘 완료</div>
+      <ul class="checklist">
+        <li><div class="check done">✓</div><span>손흥민 프로필 (신랑 구글)</span></li>
+        <li><div class="check done">✓</div><span>건강보험 환급금 (네이버 + 구글)</span></li>
+        <li><div class="check done">✓</div><span>여권 분실 신고 (티스토리 3번째 글)</span></li>
+        <li><div class="check done">✓</div><span>신랑 블로그 3글 삼각 내부링크 완성</span></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="section-title">다음 할 일</div>
+      <ul class="checklist">
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>고유가 피해지원금 글 역링크 추가 (예약 발행 후)</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>황인범 프로필 글 (신랑 구글)</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>멕시코전 결과 분석 (6/19 경기 후)</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>티스토리 4~10번째 글 채우기</span></li>
+        <li><div class="check pending" onclick="toggleCheck(this)"></div><span>서치콘솔 URL 색인 요청 (티스토리)</span></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let currentPlatform = 'naver';
+let generatedContent = { naver: '', google: '', tistory: '' };
+
+const blogDescMap = {
+  jiwon: '정부지원금 블로그 (근로장려금, 에너지바우처, 고유가 피해지원금, 청년지원금 등)',
+  tax: '세금·납부정보 블로그 (종합소득세, 홈택스, 연말정산, 부가세 등)',
+  life: '생활정보 블로그 (여권, 건강보험, 운전면허, 생활 꿀팁 등)',
+  sports: '스포츠 블로그 (축구, 야구, 월드컵, 선수 프로필 등)'
+};
+
+const catNameMap = {
+  jiwon: '정부지원금',
+  tax: '세금·납부정보',
+  life: '생활정보',
+  sports: '스포츠'
+};
+
+function getApiKey() {
+  return document.getElementById('api-key').value.trim();
+}
+
+function checkApiKey() {
+  const key = getApiKey();
+  const status = document.getElementById('api-status');
+  if (key.startsWith('sk-ant-')) {
+    status.textContent = '연결됨 ✓';
+    status.className = 'api-status ok';
+  } else if (key.length > 0) {
+    status.textContent = '키 확인 필요';
+    status.className = 'api-status';
+  } else {
+    status.textContent = '미입력';
+    status.className = 'api-status';
+  }
+}
+
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+function showPlatform(name, el) {
+  currentPlatform = name;
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const box = document.getElementById('output-box');
+  const content = generatedContent[name] || '아직 생성된 내용이 없어요.';
+  box.textContent = content;
+  const count = document.getElementById('char-count');
+  if (generatedContent[name]) {
+    count.textContent = generatedContent[name].length.toLocaleString() + '자';
+  } else {
+    count.textContent = '';
+  }
+}
+
+function updateCatDisplay() {
+  const type = document.getElementById('blog-type').value;
+  document.getElementById('cat-display').textContent = '카테고리: ' + (catNameMap[type] || '');
+}
+
+async function callClaude(prompt) {
+  const key = getApiKey();
+  if (!key) {
+    alert('API 키를 먼저 입력해주세요!');
+    return null;
+  }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content.map(i => i.text || '').join('');
+}
+
+async function generatePost() {
+  const keyword = document.getElementById('keyword-input').value.trim();
+  const blogType = document.getElementById('blog-type').value;
+  if (!keyword) { alert('키워드를 입력해주세요!'); return; }
+
+  const dot = document.getElementById('gen-dot');
+  const status = document.getElementById('gen-status');
+  const box = document.getElementById('output-box');
+
+  dot.className = 'status-dot loading';
+  status.textContent = '생성 중...';
+  box.innerHTML = '<span class="spinner"></span>Claude가 글을 작성하고 있어요... (잠시 기다려주세요)';
+
+  const blogDesc = blogDescMap[blogType];
+  const catName = catNameMap[blogType];
+
+  const prompt = `다음 키워드로 블로그 글 3가지 버전을 작성해주세요.
+
+키워드: ${keyword}
+블로그 유형: ${blogDesc}
+카테고리: ${catName}
+
+중요 규칙:
+- 모든 블로그가 AdSense 승인 전이므로 각 버전 모두 1,500자 이상
+- 광고 단위 삽입 표시 절대 금지
+- 이미지 권장 표시 금지
+- ~요체로 작성 (네이버/티스토리)
+- 실제 발행 가능한 완성 글 작성
+
+아래 JSON 형식으로만 응답 (다른 텍스트 없이):
+{
+  "naver": "네이버 블로그용 글 (숫자+핵심정보+행동유도 도입부, ~요체, 소제목 ■ 사용, 1500자 이상)",
+  "google": "구글 Blogger용 HTML 글 (E-E-A-T, h2/h3태그, 표 인라인스타일, 출처명시, 1500자 이상)",
+  "tistory": "티스토리용 글 (H2/H3 구조, 목차 포함, ~요체, 1500자 이상)"
+}`;
+
+  try {
+    const text = await callClaude(prompt);
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    generatedContent = parsed;
+    box.textContent = parsed[currentPlatform] || '생성된 내용이 없어요.';
+    const count = document.getElementById('char-count');
+    count.textContent = (parsed[currentPlatform] || '').length.toLocaleString() + '자';
+    dot.className = 'status-dot ok';
+    status.textContent = '생성 완료 ✓';
+  } catch(e) {
+    box.textContent = '오류: ' + e.message;
+    dot.className = 'status-dot error';
+    status.textContent = '오류 발생';
+  }
+}
+
+async function convertPost() {
+  const input = document.getElementById('convert-input').value.trim();
+  const target = document.getElementById('convert-target').value;
+  if (!input) { alert('원본 글을 붙여넣어 주세요!'); return; }
+
+  const output = document.getElementById('convert-output');
+  output.innerHTML = '<span class="spinner"></span>변환 중...';
+
+  const targetDesc = {
+    google: '구글 Blogger (HTML, E-E-A-T, Featured Snippet, h2/h3, 표 인라인스타일, 출처명시, 1500자 이상, 광고표시 없이)',
+    tistory: '티스토리 (H2/H3, 목차, ~요체, 1500자 이상, 광고표시 없이)',
+    naver: '네이버 (숫자+핵심정보 도입부, ~요체, 소제목 ■ 사용, 1500자 이상)'
+  }[target];
+
+  const prompt = `아래 블로그 글을 ${targetDesc} 버전으로 변환해주세요. 변환된 글만 출력하세요.
+
+원본:
+${input}`;
+
+  try {
+    const text = await callClaude(prompt);
+    output.textContent = text;
+  } catch(e) {
+    output.textContent = '오류: ' + e.message;
+  }
+}
+
+async function generateTags() {
+  const keyword = document.getElementById('tag-input').value.trim();
+  const platform = document.getElementById('tag-platform').value;
+  if (!keyword) { alert('키워드를 입력해주세요!'); return; }
+
+  const output = document.getElementById('tag-output');
+  const preview = document.getElementById('tag-preview');
+  output.innerHTML = '<span class="spinner"></span>생성 중...';
+  preview.innerHTML = '';
+
+  const format = {
+    naver: '# 포함, 공백으로 구분 (예: #건강보험환급금 #본인부담상한제)',
+    tistory: '# 없이 줄바꿈으로 구분 (예:\n건강보험환급금\n본인부담상한제)',
+    google: '# 포함, 공백으로 구분'
+  }[platform];
+
+  const prompt = `"${keyword}" 키워드로 블로그 태그 15개를 생성해주세요.
+형식: ${format}
+태그만 출력하세요. 다른 설명 없이.`;
+
+  try {
+    const text = await callClaude(prompt);
+    output.textContent = text.trim();
+    const tags = platform === 'tistory'
+      ? text.trim().split('\n').filter(t => t.trim())
+      : text.trim().split(/\s+/).filter(t => t.length > 0);
+    preview.innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
+  } catch(e) {
+    output.textContent = '오류: ' + e.message;
+  }
+}
+
+function copyOutput() {
+  const text = document.getElementById('output-box').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '복사됨 ✓';
+    setTimeout(() => btn.textContent = '복사', 1500);
+  });
+}
+
+function copyConvert() {
+  const text = document.getElementById('convert-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '복사됨 ✓';
+    setTimeout(() => btn.textContent = '복사', 1500);
+  });
+}
+
+function copyTags() {
+  const text = document.getElementById('tag-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '복사됨 ✓';
+    setTimeout(() => btn.textContent = '복사', 1500);
+  });
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.classList.toggle('pending');
+  el.textContent = el.classList.contains('done') ? '✓' : '';
+  updateProgress();
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('#checklist .check');
+  const done = document.querySelectorAll('#checklist .check.done');
+  const pct = Math.round((done.length / all.length) * 100);
+  document.getElementById('check-progress').textContent = done.length + ' / ' + all.length + ' 완료';
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function resetChecklist() {
+  document.querySelectorAll('#checklist .check').forEach(el => {
+    el.classList.remove('done');
+    el.classList.add('pending');
+    el.textContent = '';
+  });
+  updateProgress();
+}
+
+updateCatDisplay();
+updateProgress();
+</script>
+</body>
+</html>
